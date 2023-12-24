@@ -1,6 +1,6 @@
 #include <FastLED.h>
 
-#define NUM_LEDS 50
+#define NUM_LEDS 5
 #define DATA_PIN 3
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB 
@@ -26,6 +26,8 @@ CHSV currentColorHSV = baseColorHSV;
 int LED; // currently selected LED for variations // declare inside smaller scope?
 int selectedLEDs[NumLEDsToAdjust] = {}; // array of LEDs to be set to the current color (blended result) MAKE SURE TO RESET THIS EVERY x MS?
 bool fullyFadedAllLEDs = false; // set to true when all selected LEDs are fully faded to the target/adjusted color, when true new selectedLEDs can be chosen and this will become false 
+bool fadeUp = true; // fade from base to adjusted - becomes true when current == base
+bool fadeDown = false; // fade from adjusted to base - becomes true when current == adjusted
 
 int hueVariance;
 int brightnessVariance;
@@ -53,10 +55,22 @@ void setup() {
     delay(10);
   }
 
+  randomSeed(analogRead(A0));
+
 }
 
 void loop() {
   currentMillis = millis();
+  
+//SHOULD BE HANDLED BY THE NOT STATEMENTS IN blendToward func
+  // if (currentColorHSV == baseColorHSV){
+  //   fadeUp = true;
+  //   fadeDown = false;
+  // }
+  // else if (currentColorHSV == adjColorHSV){
+  //   fadeUp = false;
+  //   fadeDown = true;
+  // }
 
   // Serial.println("DOGGO");
   if (currentMillis - prevVariationInt > variationInterval || count == 1 ){ // not giving enough time fro them to blend?
@@ -86,21 +100,21 @@ void loop() {
     Serial.print(" Adj Hue: ");
     Serial.println(adjColorHSV.h);
   }
-  //??Dont think i need this??//
-  // if (currentColorHSV.h == baseColorHSV.h){ // if true then fade up to the new adjusted color - DONT FORGET TO BLEND VALUES
-  //   Serial.println("YEPPity YeP");
-  //   // blendTowards(currentColorHSV, adjColorHSV, 250); // blend up to adj
-  // }
 
   // blend up - if currentcolor is same as base color blend up to adjusted color
-  currentColorHSV = blendTowards(currentColorHSV, adjColorHSV, 5); // blend up to adj
+  if (fadeUp){
+    currentColorHSV = blendTowards(currentColorHSV, adjColorHSV, 5); // blend up to adj
+  }
+
   // blend down - if currentcolor is same as adjusted color blend down to base color
-  // currentColorHSV = blendTowards(currentColorHSV, baseColorHSV, 5);
+  else if (fadeDown){
+    currentColorHSV = blendTowards(currentColorHSV, baseColorHSV, 5);
+  }
+
   for (int i = 0; i < NumLEDsToAdjust; i++){/////wait wiait iwait i this is wrong
     // Serial.println(currentColorHSV.h);
     leds[selectedLEDs[i]] = currentColorHSV; // set the strip at value stored at index i in selectedLEDs array
   }
-
   FastLED.show();
   count++;
 }
@@ -110,7 +124,14 @@ CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
   // Serial.println(targetColor.h);
   if( currentColor.h == targetColor.h && currentColor.v == targetColor.v) {
     Serial.println("both EQUAL"); 
-    fullyFadedAllLEDs = true;
+
+    if (fadeDown){ // if we have been going back to base and now the LEDs are at the base we are done and they are fully faded
+      fullyFadedAllLEDs = true;
+    }
+
+    fadeUp = not fadeUp;
+    fadeDown = not fadeDown; // should come after setting fullyFadedAllLEDs cause this is setting fadeDown for the next cycle
+
     return currentColor;
   }  
   if( currentColor.h < targetColor.h ) {
