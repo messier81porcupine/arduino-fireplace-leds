@@ -1,6 +1,6 @@
 #include <FastLED.h>
 
-#define NUM_LEDS 5
+#define NUM_LEDS 50
 #define DATA_PIN 3
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB 
@@ -12,12 +12,12 @@ const int NumLEDsToAdjust = NUM_LEDS * .20; /// number of leds to be adjusted ev
 
 // color to fade up to is changed every so often
 int colorVarianceRange = 15; // how far from the baseColor should the random fluctuations deviate
-int brightnessVarianceRange = 150; // how far from the base brightness should the random fluctuations deviate
+int brightnessVarianceRange = 100; // how far from the base brightness should the random fluctuations deviate
 
 // Base color values
-int hue = 25;
+int hue = 15;
 int sat = 255;  
-int val = 255 - brightnessVarianceRange; // prevent this plus random fluctuation form going over 255 and becomming very small
+int val = 150 - brightnessVarianceRange; // prevent this plus random fluctuation form going over 255 and becomming very small
 
 CHSV baseColorHSV(hue, sat, val);
 CHSV adjColorHSV;
@@ -38,6 +38,7 @@ unsigned long variationInterval = 5000;
 unsigned long prevVariationInt;
 
 int count = 1;
+int delayMS = 50;
 
 void setup() {
   Serial.begin(9600);
@@ -73,7 +74,7 @@ void loop() {
   // }
 
   // Serial.println("DOGGO");
-  if (currentMillis - prevVariationInt > variationInterval || count == 1 ){ // not giving enough time fro them to blend?
+  if ((currentMillis - prevVariationInt > variationInterval || count == 1 ) && fullyFadedAllLEDs){ // not giving enough time fro them to blend?
     prevVariationInt = currentMillis;
     if (fullyFadedAllLEDs || count == 1){
 
@@ -92,8 +93,8 @@ void loop() {
     hueVariance = random(-colorVarianceRange, colorVarianceRange);  // how much should this LED vary from the base color
     brightnessVariance = random(-brightnessVarianceRange, brightnessVarianceRange); // how much should this LED vary from the base brightness (val)
     
-    // adjColorHSV = CHSV(baseColorHSV.h + hueVariance, sat, baseColorHSV.v + brightnessVariance);
-    adjColorHSV = CHSV(100, 255, 50);
+    adjColorHSV = CHSV(baseColorHSV.h + hueVariance, sat, baseColorHSV.v + brightnessVariance);
+    // adjColorHSV = CHSV(100, 255, 50);
 
     Serial.print("Hue Variance: ");
     Serial.print(hueVariance);
@@ -117,6 +118,7 @@ void loop() {
   }
   FastLED.show();
   count++;
+  delay(delayMS);
 }
 
 CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // I NEED TO MAKE SURE IT IS ONLY SETTING THE SAME LEDS UNTIL THEY HAVE MADE IT UP TO THE FULL ADJ LEVEL - DONT FADE DIFFERENT LEDS EVERY TIME IT CHANGES
@@ -135,58 +137,58 @@ CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
     return currentColor; // leave and do no more
   }  
   if( currentColor.h < targetColor.h ) {
-    Serial.print(currentColor.h);
-    Serial.print("LESS hue");
-    Serial.println(targetColor.h);
+    // Serial.print(currentColor.h);
+    // Serial.print("LESS hue");
+    // Serial.println(targetColor.h);
 
     int delta = targetColor.h - currentColor.h;
     delta = scale8_video( delta, incAmount);
     currentColor.h += delta;
     
-    Serial.print(currentColorHSV.h);
-    Serial.println("NEW hue");
+    // Serial.print(currentColorHSV.h);
+    // Serial.println("NEW hue");
     
   } 
   else if ( currentColor.h > targetColor.h) {
-    Serial.print(currentColor.h);
-    Serial.print("GREATER hue");
-    Serial.println(targetColor.h);
+    // Serial.print(currentColor.h);
+    // Serial.print("GREATER hue");
+    // Serial.println(targetColor.h);
 
     int delta = currentColor.h - targetColor.h;
     delta = scale8_video( delta, incAmount);
     currentColor.h -= delta;
     
-    Serial.print(currentColorHSV.h);
-    Serial.println("NEW hue");
+    // Serial.print(currentColorHSV.h);
+    // Serial.println("NEW hue");
 
   }
   else {Serial.println("its done ig hue");}
 
   if( currentColor.v < targetColor.v ) {
-    Serial.print(currentColor.v);
-    Serial.print("LESS val");
-    Serial.println(targetColor.v);
+    // Serial.print(currentColor.v);
+    // Serial.print("LESS val");
+    // Serial.println(targetColor.v);
 
     int delta = targetColor.v - currentColor.v;
     delta = scale8_video( delta, incAmount);
     currentColor.v += delta;
     
-    Serial.print(currentColorHSV.v);
-    Serial.println("NEW val");
+    // Serial.print(currentColorHSV.v);
+    // Serial.println("NEW val");
 
     
   } 
   else if ( currentColor.v > targetColor.v) {
-    Serial.print(currentColor.v);
-    Serial.print("GREATER val");
-    Serial.println(targetColor.v);
+    // Serial.print(currentColor.v);
+    // Serial.print("GREATER val");
+    // Serial.println(targetColor.v);
 
     int delta = currentColor.v - targetColor.v;
     delta = scale8_video( delta, incAmount);
     currentColor.v -= delta;
     
-    Serial.print(currentColorHSV.v);
-    Serial.println("NEW val");
+    // Serial.print(currentColorHSV.v);
+    // Serial.println("NEW val");
 
   }
   else {Serial.println("its done ig val");}
