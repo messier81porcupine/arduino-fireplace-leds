@@ -1,3 +1,5 @@
+// Thanks to Mark Kriegsman for the logic of this program - https://gist.github.com/kriegsman/d0a5ed3c8f38c64adcb4837dafb6e690
+
 #include <FastLED.h>
 
 #define NUM_LEDS 50
@@ -10,14 +12,24 @@ CRGB leds[NUM_LEDS];
 //REMOBE?
 const int NumLEDsToAdjust = NUM_LEDS * .20; /// number of leds to be adjusted every periodic sections? or mayeb REMOVE THIS?
 
-// color to fade up to is changed every so often
-int colorVarianceRange = 15; // how far from the baseColor should the random fluctuations deviate
-int brightnessVarianceRange = 100; // how far from the base brightness should the random fluctuations deviate
+// variance from base range {TRUE}
+int colorVarianceRange = 15; // how far from the base hue should the random fluctuations deviate
+int brightnessVarianceRange = 100; // how far from the base value should the random fluctuations deviate
+
+// OR //    custom bounds for adjusted color {FALSE}
+// range of hues for adjusted color
+int hueMin = 0;
+int hueMax = 20;
+// range of values for adjusted color
+int valMin = 10; 
+int valMax = 200;
+
+bool useVarianceRange = false; // set true to use ranges and set false to use custom bounds for hue and value variations - see above
 
 // Base color values
-int hue = 15;
+int hue = 10;
 int sat = 255;  
-int val = 150 - brightnessVarianceRange; // prevent this plus random fluctuation form going over 255 and becomming very small
+int val = 150 - brightnessVarianceRange; // prevent this plus random fluctuation form going over 255 and becomming very small and it makes the fading jumpy it seems
 
 CHSV baseColorHSV(hue, sat, val);
 CHSV adjColorHSV;
@@ -62,18 +74,7 @@ void setup() {
 
 void loop() {
   currentMillis = millis();
-  
-//SHOULD BE HANDLED BY THE NOT STATEMENTS IN blendToward func
-  // if (currentColorHSV == baseColorHSV){
-  //   fadeUp = true;
-  //   fadeDown = false;
-  // }
-  // else if (currentColorHSV == adjColorHSV){
-  //   fadeUp = false;
-  //   fadeDown = true;
-  // }
 
-  // Serial.println("DOGGO");
   if ((currentMillis - prevVariationInt > variationInterval || count == 1 ) && fullyFadedAllLEDs){ // not giving enough time fro them to blend?
     prevVariationInt = currentMillis;
     if (fullyFadedAllLEDs || count == 1){
@@ -89,12 +90,21 @@ void loop() {
       }
       fullyFadedAllLEDs = false;
     }
-    
-    hueVariance = random(-colorVarianceRange, colorVarianceRange);  // how much should this LED vary from the base color
-    brightnessVariance = random(-brightnessVarianceRange, brightnessVarianceRange); // how much should this LED vary from the base brightness (val)
-    
-    adjColorHSV = CHSV(baseColorHSV.h + hueVariance, sat, baseColorHSV.v + brightnessVariance);
-    // adjColorHSV = CHSV(100, 255, 50);
+
+     if (useVarianceRange){ // compile time choice
+      hueVariance = random(-colorVarianceRange, colorVarianceRange);  // how much should this LED vary from the base color
+      brightnessVariance = random(-brightnessVarianceRange, brightnessVarianceRange); // how much should this LED vary from the base brightness (val)
+    }
+    else if (not useVarianceRange){ // compile time choice
+      hueVariance = random(hueMin, hueMax);  // how much should this LED vary from the base color
+      brightnessVariance = random(valMin, valMax); // how much should this LED vary from the base brightness (val)
+    }
+
+
+    if (baseColorHSV.h + hueVariance < 0){hueVariance = 0;} // prevents funky colors if hue becomes negative
+
+    adjColorHSV = CHSV(baseColorHSV.h + hueVariance, sat, baseColorHSV.v + brightnessVariance); // create the target color to fade up to
+    // adjColorHSV = CHSV(100, 255, 50); // useful alternate color for debugging and testing
 
     Serial.print("Hue Variance: ");
     Serial.print(hueVariance);
@@ -121,11 +131,11 @@ void loop() {
   delay(delayMS);
 }
 
-CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // I NEED TO MAKE SURE IT IS ONLY SETTING THE SAME LEDS UNTIL THEY HAVE MADE IT UP TO THE FULL ADJ LEVEL - DONT FADE DIFFERENT LEDS EVERY TIME IT CHANGES
+CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ 
   // Serial.print("tcH");
   // Serial.println(targetColor.h);
   if( currentColor.h == targetColor.h && currentColor.v == targetColor.v) {
-    Serial.println("both EQUAL"); 
+    // Serial.println("both EQUAL"); 
 
     if (fadeDown){ // if we have been going back to base and now the LEDs are at the base we are done and they are fully faded
       fullyFadedAllLEDs = true;
@@ -162,7 +172,7 @@ CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
     // Serial.println("NEW hue");
 
   }
-  else {Serial.println("its done ig hue");}
+  // else {Serial.println("its done ig hue");}
 
   if( currentColor.v < targetColor.v ) {
     // Serial.print(currentColor.v);
@@ -191,62 +201,8 @@ CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
     // Serial.println("NEW val");
 
   }
-  else {Serial.println("its done ig val");}
+  // else {Serial.println("its done ig val");}
 
   return currentColor;
 }
 
-// void fadeTowardHSV(CRGB* leds, int NUM_LEDS, const CHSV& baseColor, int incAmount){ 
-//   for (int i = 0; i < NUM_LEDS; i++){
-//     CHSV& current = leds[i]; /// does this make sense? get the current value from the LEDs?
-//     blendTowards(current.h, baseColor.h, incAmount );
-//   }
-// }
-
-
-
-
-/*
-
-// Thank you Mark Kriegsman! might not use them tho i want hsv so ill be modifying your code
-
-// Helper function that blends one uint8_t toward another by a given amount
-void nblendU8TowardU8( uint8_t& cur, const uint8_t target, uint8_t amount){ // magic ig
-  if( cur == target) return;
-  
-  if( cur < target ) {
-    uint8_t delta = target - cur;
-    delta = scale8_video( delta, amount);
-    cur += delta;
-  } else {
-    uint8_t delta = cur - target;
-    delta = scale8_video( delta, amount);
-    cur -= delta;
-  }
-}
-
-// Blend one CRGB color toward another CRGB color by a given amount.
-// Blending is linear, and done in the RGB color space.
-// This function modifies 'cur' in place.
-CRGB fadeTowardColor( CRGB& cur, const CRGB& target, uint8_t amount){ // some background magic code
-
-  nblendU8TowardU8( cur.red,   target.red,   amount);
-  nblendU8TowardU8( cur.green, target.green, amount);
-  nblendU8TowardU8( cur.blue,  target.blue,  amount);
-  return cur;
-}
-
-// Fade an entire array of CRGBs toward a given background color by a given amount
-// This function modifies the pixel array in place.
-*/
-// void fadeTowardColor( CRGB* L, uint16_t N, const CRGB& bgColor, uint8_t fadeAmount){ // whole strip - gets adjusted LEDs back to base (fade DOWN)
-
-//   for( uint16_t i = 0; i < N; i++) {
-//     fadeTowardColor( L[i], bgColor, fadeAmount);
-//   }
-// }
-// void fadeTowardColorSingle( CRGB* L, int LED, uint16_t N, const CRGB& bgColor, uint8_t fadeAmount){ // single LED - adjusts LEDs to varied states (fade UP)
-
-//   fadeTowardColor( L[LED], bgColor, fadeAmount);
-  
-// }
