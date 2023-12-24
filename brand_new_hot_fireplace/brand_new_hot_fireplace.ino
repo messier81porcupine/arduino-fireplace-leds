@@ -132,7 +132,7 @@ CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
     fadeUp = not fadeUp;
     fadeDown = not fadeDown; // should come after setting fullyFadedAllLEDs cause this is setting fadeDown for the next cycle
 
-    return currentColor;
+    return currentColor; // leave and do no more
   }  
   if( currentColor.h < targetColor.h ) {
     Serial.print(currentColor.h);
@@ -145,7 +145,6 @@ CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
     
     Serial.print(currentColorHSV.h);
     Serial.println("NEW hue");
-    return currentColor;
     
   } 
   else if ( currentColor.h > targetColor.h) {
@@ -159,7 +158,6 @@ CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
     
     Serial.print(currentColorHSV.h);
     Serial.println("NEW hue");
-    return currentColor;
 
   }
   else {Serial.println("its done ig hue");}
@@ -175,7 +173,6 @@ CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
     
     Serial.print(currentColorHSV.v);
     Serial.println("NEW val");
-    return currentColor;
 
     
   } 
@@ -190,10 +187,11 @@ CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
     
     Serial.print(currentColorHSV.v);
     Serial.println("NEW val");
-    return currentColor;
 
   }
   else {Serial.println("its done ig val");}
+
+  return currentColor;
 }
 
 // void fadeTowardHSV(CRGB* leds, int NUM_LEDS, const CHSV& baseColor, int incAmount){ 
