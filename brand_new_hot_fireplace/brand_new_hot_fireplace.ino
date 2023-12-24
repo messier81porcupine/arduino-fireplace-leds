@@ -78,8 +78,8 @@ void loop() {
     hueVariance = random(-colorVarianceRange, colorVarianceRange);  // how much should this LED vary from the base color
     brightnessVariance = random(-brightnessVarianceRange, brightnessVarianceRange); // how much should this LED vary from the base brightness (val)
     
-    adjColorHSV = CHSV(baseColorHSV.h + hueVariance, sat, baseColorHSV.v + brightnessVariance);
-    // adjColorHSV = CHSV(100, 255, 50);
+    // adjColorHSV = CHSV(baseColorHSV.h + hueVariance, sat, baseColorHSV.v + brightnessVariance);
+    adjColorHSV = CHSV(100, 255, 50);
 
     Serial.print("Hue Variance: ");
     Serial.print(hueVariance);
@@ -93,9 +93,9 @@ void loop() {
   // }
 
   // blend up - if currentcolor is same as base color blend up to adjusted color
-  blendTowards(currentColorHSV, adjColorHSV, 5); // blend up to adj
+  currentColorHSV = blendTowards(currentColorHSV, adjColorHSV, 5); // blend up to adj
   // blend down - if currentcolor is same as adjusted color blend down to base color
-  blendTowards(currentColorHSV, baseColorHSV, 5)
+  // currentColorHSV = blendTowards(currentColorHSV, baseColorHSV, 5);
   for (int i = 0; i < NumLEDsToAdjust; i++){/////wait wiait iwait i this is wrong
     // Serial.println(currentColorHSV.h);
     leds[selectedLEDs[i]] = currentColorHSV; // set the strip at value stored at index i in selectedLEDs array
@@ -105,13 +105,13 @@ void loop() {
   count++;
 }
 
-void blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // I NEED TO MAKE SURE IT IS ONLY SETTING THE SAME LEDS UNTIL THEY HAVE MADE IT UP TO THE FULL ADJ LEVEL - DONT FADE DIFFERENT LEDS EVERY TIME IT CHANGES
+CHSV blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // I NEED TO MAKE SURE IT IS ONLY SETTING THE SAME LEDS UNTIL THEY HAVE MADE IT UP TO THE FULL ADJ LEVEL - DONT FADE DIFFERENT LEDS EVERY TIME IT CHANGES
   // Serial.print("tcH");
   // Serial.println(targetColor.h);
   if( currentColor.h == targetColor.h && currentColor.v == targetColor.v) {
     Serial.println("both EQUAL"); 
     fullyFadedAllLEDs = true;
-    return;
+    return currentColor;
   }  
   if( currentColor.h < targetColor.h ) {
     Serial.print(currentColor.h);
@@ -120,10 +120,11 @@ void blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
 
     int delta = targetColor.h - currentColor.h;
     delta = scale8_video( delta, incAmount);
-    currentColorHSV.h += delta;
+    currentColor.h += delta;
     
     Serial.print(currentColorHSV.h);
     Serial.println("NEW hue");
+    return currentColor;
     
   } 
   else if ( currentColor.h > targetColor.h) {
@@ -133,10 +134,12 @@ void blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
 
     int delta = currentColor.h - targetColor.h;
     delta = scale8_video( delta, incAmount);
-    currentColorHSV.h -= delta;
+    currentColor.h -= delta;
     
     Serial.print(currentColorHSV.h);
     Serial.println("NEW hue");
+    return currentColor;
+
   }
   else {Serial.println("its done ig hue");}
 
@@ -147,10 +150,12 @@ void blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
 
     int delta = targetColor.v - currentColor.v;
     delta = scale8_video( delta, incAmount);
-    currentColorHSV.v += delta;
+    currentColor.v += delta;
     
     Serial.print(currentColorHSV.v);
     Serial.println("NEW val");
+    return currentColor;
+
     
   } 
   else if ( currentColor.v > targetColor.v) {
@@ -160,10 +165,12 @@ void blendTowards(CHSV currentColor, const CHSV targetColor, int incAmount){ // 
 
     int delta = currentColor.v - targetColor.v;
     delta = scale8_video( delta, incAmount);
-    currentColorHSV.v -= delta;
+    currentColor.v -= delta;
     
     Serial.print(currentColorHSV.v);
     Serial.println("NEW val");
+    return currentColor;
+
   }
   else {Serial.println("its done ig val");}
 }
